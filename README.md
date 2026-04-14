@@ -174,17 +174,79 @@ python main.py preflight
 python main.py publish --dry-run
 ```
 
-### 7. Set up GitHub Actions (optional)
+### 7. Set up GitHub Actions (optional but recommended)
 
-For automated daily runs:
+GitHub Actions automates the full pipeline — fetch, draft, PR creation, and publishing. Here's how to set it up:
 
-1. Push to GitHub
-2. Add secrets in repo **Settings → Secrets and variables → Actions**:
-   - `LINKEDIN_CLIENT_ID`
-   - `LINKEDIN_CLIENT_SECRET`
-   - `LINKEDIN_ACCESS_TOKEN`
-3. Uncomment the cron schedule in `.github/workflows/fetch-and-draft.yml`
-4. The `publish-approved.yml` workflow triggers automatically when you add the `approve-post` label to a PR and merge it
+#### a. Add secrets
+
+Go to your repo on GitHub → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**. Add these three:
+
+| Secret name | Value | Where to find it |
+|---|---|---|
+| `LINKEDIN_CLIENT_ID` | Your LinkedIn app client ID | LinkedIn Developer Portal → Auth tab |
+| `LINKEDIN_CLIENT_SECRET` | Your LinkedIn app client secret | LinkedIn Developer Portal → Auth tab |
+| `LINKEDIN_ACCESS_TOKEN` | Your OAuth access token | Output of `python scripts/linkedin_setup.py` |
+
+#### b. (Optional) Add blocked names
+
+If you want content safety to block specific company/customer names from appearing in posts:
+- Go to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+- Name: `BLOCKED_NAMES`, Value: one name per line
+
+#### c. Enable the daily schedule
+
+Open `.github/workflows/fetch-and-draft.yml` and uncomment the cron line:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'  # Weekdays at 06:00 UTC — uncomment this
+  workflow_dispatch:         # Manual trigger always available
+```
+
+Push the change. The workflow will now run automatically on weekday mornings.
+
+#### d. Create the `approve-post` label
+
+Go to your repo → **Issues** → **Labels** → **New label**:
+- Name: `approve-post`
+- Color: pick any (green suggested)
+- Description: "Approve this draft for LinkedIn publishing"
+
+This label is what triggers the publish workflow when you merge a PR.
+
+#### e. How the automation works once set up
+
+```
+Daily at 06:00 UTC (or manual trigger)
+        ↓
+fetch-and-draft.yml runs:
+  1. Fetches RSS feeds + GitHub releases
+  2. Scores and filters items
+  3. Generates AI drafts
+  4. Creates one PR per draft (with full preview in PR body)
+        ↓
+You review PRs on your phone/desktop:
+  - Read the preview
+  - Edit if needed (pencil icon on the draft file)
+  - Add 'approve-post' label
+  - Merge the PR
+        ↓
+publish-approved.yml triggers:
+  1. Checks PR has 'approve-post' label
+  2. File guard: verifies only drafts/*.md changed
+  3. Posts to LinkedIn via API
+  4. On failure: creates a GitHub issue alert
+```
+
+#### f. Which workflows run by default
+
+Two workflows run on every push/PR without any configuration:
+- **tests.yml** — runs pytest and ruff linting
+- **security.yml** — runs pip-audit for dependency vulnerabilities
+
+All other workflows require secrets or manual setup (see the table below).
 
 ## How Scoring Works
 
