@@ -81,7 +81,11 @@ class DraftPost:
 
 def _load_voice_profile() -> str:
     """Load the voice profile markdown for the system prompt."""
-    return VOICE_PROFILE_PATH.read_text(encoding="utf-8")
+    try:
+        return VOICE_PROFILE_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        logger.error("Voice profile not found at %s. Cannot generate drafts.", VOICE_PROFILE_PATH)
+        raise SystemExit(f"Missing required file: {VOICE_PROFILE_PATH}")
 
 
 def _build_system_prompt(voice_profile: str) -> str:

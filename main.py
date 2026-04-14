@@ -1,12 +1,13 @@
 """CLI entry point for linkedin-auto-poster.
 
 Commands:
-  fetch       - Fetch news from RSS feeds, score, deduplicate, save candidates
-  draft       - Generate AI post drafts from fetched candidates (standalone + roundup)
-  draft-topic - Generate scheduled opinion/thought-leadership posts from content-topics.yaml
-  draft-repo  - Generate showcase posts for newly created GitHub repos
-  publish     - Publish approved drafts to LinkedIn (or --dry-run to preview)
-  preflight   - Validate LinkedIn API credentials and token health
+  fetch        - Fetch news from RSS feeds, score, deduplicate, save candidates
+  draft        - Generate AI post drafts from fetched candidates (standalone + roundup)
+  draft-topic  - Generate scheduled opinion/thought-leadership posts from content-topics.yaml
+  draft-repo   - Generate showcase posts for newly created GitHub repos
+  publish      - Publish approved drafts to LinkedIn (or --dry-run to preview)
+  email-digest - Send email digest of scored news items to configured recipients
+  preflight    - Validate LinkedIn API credentials and token health
 """
 
 from __future__ import annotations
@@ -531,24 +532,80 @@ def draft_topic(
     click.echo(f"Generated {drafted}/{len(targets)} topic drafts")
 
 
+def _group_repos_by_week(repos: list[dict]) -> dict[tuple[int, int], list[dict]]:
+    """Group repos by (iso_year, iso_week) based on created_at."""
+    from datetime import datetime
+
+    groups: dict[tuple[int, int], list[dict]] = {}
+    for repo in repos:
+        created_str = repo.get("created_at") or ""
+        if not created_str:
+            continue  # Skip repos with no creation date
+        try:
+            created = datetime.fromisoformat(created_str.replace("Z", "+00:00"))
+            key = created.isocalendar()[:2]  # (year, week)
+        except (ValueError, AttributeError):
+            continue  # Skip repos with invalid dates
+        groups.setdefault(key, []).append(repo)
+    return groups
+
+
+def _is_current_week_ready(today: None = None) -> bool:
+    """Current week is only ready to draft on Friday or later."""
+    from datetime import date as _date
+
+    if today is None:
+        today = _date.today()
+    return today.weekday() >= 4  # Friday = 4
+
+
+def _fetch_readme(full_name: str) -> str:
+    """Fetch README excerpt for a repo."""
+    import requests as req
+
+    try:
+        token = (os.environ.get("COPILOT_GITHUB_TOKEN")
+                 or os.environ.get("GH_TOKEN")
+                 or os.environ.get("GITHUB_TOKEN"))
+        hdrs: dict[str, str] = {"Accept": "application/vnd.github.raw+json"}
+        if token:
+            hdrs["Authorization"] = f"Bearer {token}"
+        r2 = req.get(
+            f"https://api.github.com/repos/{full_name}/readme",
+            headers=hdrs,
+            timeout=15,
+        )
+        if r2.status_code == 200:
+            return r2.text[:1500]
+    except Exception:
+        pass
+    return ""
+
+
 @main.command(name="draft-repo")
 @click.option("--config", default="config.yaml", help="Path to config file.")
 @click.option("--output-dir", default="drafts", help="Output directory.")
 @click.option("--repo", default=None, help="Specific repo (owner/name) to draft about.")
 def draft_repo(config: str, output_dir: str, repo: str | None) -> None:
-    """Generate showcase drafts for newly created GitHub repos."""
+    """Generate showcase drafts for newly created GitHub repos.
+
+    When multiple repos are created in the same ISO week, they are consolidated
+    into a single weekly showcase post. The current week only drafts on Friday
+    or later (Mon-Thu repos are buffered). Use --repo to always draft individually.
+    """
     from datetime import date
 
     import requests as req
 
     from src.drafts.drafter import generate_topic_draft, save_topic_draft_to_file
     from src.feeds import load_config
-    from src.feeds.repo_monitor import check_new_repos
+    from src.feeds.repo_monitor import check_new_repos, mark_repo_known
 
     cfg = load_config(config)
 
+    # --repo flag: always draft individually
     if repo:
-        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+        token = os.environ.get("COPILOT_GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
         headers: dict[str, str] = {"Accept": "application/vnd.github+json"}
         if token:
             headers["Authorization"] = f"Bearer {token}"
@@ -561,41 +618,15 @@ def draft_repo(config: str, output_dir: str, repo: str | None) -> None:
             click.echo(f"Repo not found: {repo}")
             return
         r = resp.json()
-        new_repos = [{
+        repo_info = {
             "name": r.get("name", ""),
             "full_name": r.get("full_name", ""),
             "description": r.get("description", "") or "",
             "html_url": r.get("html_url", ""),
             "language": r.get("language", "") or "",
             "created_at": r.get("created_at", ""),
-        }]
-    else:
-        new_repos = check_new_repos()
-
-    if not new_repos:
-        click.echo("No new repos found.")
-        return
-
-    click.echo(f"Found {len(new_repos)} new repo(s)")
-
-    for repo_info in new_repos:
-        # Fetch README for extra context
-        readme_text = ""
-        try:
-            token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-            hdrs: dict[str, str] = {"Accept": "application/vnd.github.raw+json"}
-            if token:
-                hdrs["Authorization"] = f"Bearer {token}"
-            r2 = req.get(
-                f"https://api.github.com/repos/{repo_info['full_name']}/readme",
-                headers=hdrs,
-                timeout=15,
-            )
-            if r2.status_code == 200:
-                readme_text = r2.text[:1500]
-        except Exception:
-            pass
-
+        }
+        readme_text = _fetch_readme(repo_info["full_name"])
         topic = {
             "id": f"repo-{repo_info['name']}",
             "title": f"New repo: {repo_info['name']} - {repo_info['description'][:80]}",
@@ -610,14 +641,104 @@ def draft_repo(config: str, output_dir: str, repo: str | None) -> None:
                 f"README excerpt: {readme_text[:500]}"
             ),
         }
-
         click.echo(f"  Drafting: {repo_info['full_name']}")
         draft = generate_topic_draft(topic, cfg.llm.model_dump())
         if draft:
             path = save_topic_draft_to_file(draft, output_dir)
             click.echo(f"    Saved: {path.name}")
+            mark_repo_known(repo_info["full_name"])
         else:
             click.echo(f"    Failed to generate draft for {repo_info['full_name']}")
+        return
+
+    # Auto-detect mode: group by week and consolidate
+    new_repos = check_new_repos()
+    if not new_repos:
+        click.echo("No new repos found.")
+        return
+
+    click.echo(f"Found {len(new_repos)} new repo(s)")
+
+    current_week = date.today().isocalendar()[:2]
+    week_groups = _group_repos_by_week(new_repos)
+
+    for (year, week), repos_in_week in sorted(week_groups.items()):
+        # Buffer current week until Friday
+        if (year, week) == current_week and not _is_current_week_ready():
+            click.echo(
+                f"  Week {year}-W{week:02d}: {len(repos_in_week)} repo(s) buffered"
+                " (current week, not Friday yet)"
+            )
+            continue
+
+        if len(repos_in_week) == 1:
+            # Single repo: draft individually
+            repo_info = repos_in_week[0]
+            readme_text = _fetch_readme(repo_info["full_name"])
+            topic = {
+                "id": f"repo-{repo_info['name']}",
+                "title": f"New repo: {repo_info['name']} - {repo_info['description'][:80]}",
+                "pattern": "showcase",
+                "pillar": "iac-devops",
+                "scheduled_for": str(date.today()),
+                "notes": (
+                    f"New GitHub repo: {repo_info['full_name']}\n"
+                    f"Description: {repo_info['description']}\n"
+                    f"Language: {repo_info['language']}\n"
+                    f"URL: {repo_info['html_url']}\n"
+                    f"README excerpt: {readme_text[:500]}"
+                ),
+            }
+            click.echo(f"  Drafting: {repo_info['full_name']}")
+            draft = generate_topic_draft(topic, cfg.llm.model_dump())
+            if draft:
+                path = save_topic_draft_to_file(draft, output_dir)
+                click.echo(f"    Saved: {path.name}")
+                mark_repo_known(repo_info["full_name"])
+            else:
+                click.echo(f"    Failed to generate draft for {repo_info['full_name']}")
+        else:
+            # 2+ repos: consolidated weekly showcase
+            readme_excerpts = []
+            for ri in repos_in_week:
+                readme = _fetch_readme(ri["full_name"])
+                if readme:
+                    readme_excerpts.append(f"### {ri['name']}\n{readme[:500]}")
+
+            topic = {
+                "id": f"repo-week-{year}-W{week:02d}",
+                "title": "Repos I open-sourced this week",
+                "pattern": "showcase",
+                "pillar": "iac-devops",
+                "scheduled_for": str(date.today()),
+                "notes": "\n".join([
+                    f"- {ri['name']}: {ri['description'][:100]} ({ri['html_url']})"
+                    for ri in repos_in_week
+                ]) + "\n\nREADME excerpts:\n" + "\n".join(readme_excerpts),
+            }
+
+            click.echo(f"  Consolidating {len(repos_in_week)} repos for week {year}-W{week:02d}")
+            draft = generate_topic_draft(topic, cfg.llm.model_dump())
+            if draft:
+                path = save_topic_draft_to_file(draft, output_dir)
+                click.echo(f"    Saved: {path.name}")
+                for ri in repos_in_week:
+                    mark_repo_known(ri["full_name"])
+            else:
+                click.echo(f"    Failed to generate consolidated draft for week {year}-W{week:02d}")
+
+
+@main.command(name="email-digest")
+@click.option("--config", default="config.yaml", help="Path to config file.")
+def email_digest(config: str) -> None:
+    """Send email digest of scored news items to configured recipients."""
+    from src.email_digest import send_digest
+
+    success = send_digest()
+    if success:
+        click.echo("Digest sent successfully")
+    else:
+        click.echo("Digest not sent (check EMAIL_RECIPIENTS and SMTP config)")
 
 
 @main.command()

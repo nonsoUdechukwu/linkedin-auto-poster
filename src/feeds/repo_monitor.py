@@ -108,3 +108,10 @@ def check_new_repos(days_back: int = 7) -> list[dict]:
 
     _save_known_repos(all_names)
     return new_repos
+
+
+def mark_repo_known(full_name: str) -> None:
+    """Mark a repo as known after successful draft generation."""
+    known = _load_known_repos()
+    known.add(full_name)
+    _save_known_repos(known)
