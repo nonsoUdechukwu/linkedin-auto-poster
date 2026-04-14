@@ -9,48 +9,28 @@ It was built for Azure/cloud news, but the feeds, scoring keywords, and voice pr
 ## How It Works
 
 ```
-  ┌───────────────────────────┐
-  │ RSS Feeds / GitHub Releases│
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │       Fetch & Score        │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │      Research Agent        │
-  │  (article fetch, Learn     │
-  │   search, Terraform verify)│
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │   AI Draft (Claude Opus)   │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │  Critic Review (GPT-5.4)   │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │    Sanitize & Validate     │
-  │  (banned phrases, PII,     │
-  │   anti-AI detection)       │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │         GitHub PR          │
-  │   (one per draft, preview) │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │      Human Approval        │
-  │  (approve-post label +     │
-  │   merge PR)                │
-  └─────────────┬─────────────┘
-                │
-  ┌─────────────▼─────────────┐
-  │       LinkedIn API         │
-  └────────────────────────────┘
+        RSS Feeds / GitHub Releases
+                    |
+              Fetch & Score
+                    |
+             Research Agent
+     (article fetch, Learn search,
+          Terraform verify)
+                    |
+        AI Draft  (Claude Opus)
+                    |
+       Critic Review  (GPT-5.4)
+                    |
+          Sanitize & Validate
+    (banned phrases, PII, anti-AI)
+                    |
+               GitHub PR
+        (one per draft, preview)
+                    |
+            Human Approval
+     (approve-post label + merge)
+                    |
+              LinkedIn API
 ```
 
 ### Example Use Case
