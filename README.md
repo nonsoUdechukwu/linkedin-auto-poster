@@ -146,14 +146,14 @@ Edit `src/drafts/voice_profile.md`:
 - Add your own writing quirks and patterns
 
 **Minimum changes to get started (change these 8 things first):**
-1. `[YOUR NAME]` — your actual name (appears ~15 times)
-2. `[YOUR ROLE]` — your job title
-3. `[YOUR COMPANY]` — your employer
-4. `[X]` years — your experience
-5. Hashtags list (line 102) — pick tags for YOUR niche
-6. Topic pillars (line 117-120) — YOUR content areas
-7. Technical examples (line 82-84) — tools YOU actually use
-8. CTA patterns (line 109-112) — YOUR repo URL
+1. `[YOUR NAME]`  - your actual name (appears ~15 times)
+2. `[YOUR ROLE]`  - your job title
+3. `[YOUR COMPANY]`  - your employer
+4. `[X]` years  - your experience
+5. Hashtags list (line 102)  - pick tags for YOUR niche
+6. Topic pillars (line 117-120)  - YOUR content areas
+7. Technical examples (line 82-84)  - tools YOU actually use
+8. CTA patterns (line 109-112)  - YOUR repo URL
 
 Everything else can stay as-is for your first draft. Refine later.
 

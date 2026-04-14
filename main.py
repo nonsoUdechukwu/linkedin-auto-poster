@@ -443,14 +443,18 @@ def draft_topic(
     cfg = load_config(config)
 
     if free_topic:
-        # Ad-hoc topic generation
+        # Ad-hoc topic generation - clean up title for PR/display
+        # Use first sentence or first 80 chars as the title
+        clean_title = free_topic.split(".")[0].split("\n")[0][:80].strip()
+        if not clean_title:
+            clean_title = free_topic[:80].strip()
         topic = {
-            "id": "adhoc-" + free_topic[:30].lower().replace(" ", "-"),
-            "title": free_topic,
+            "id": "adhoc-" + clean_title[:30].lower().replace(" ", "-"),
+            "title": clean_title,
             "pattern": "lessons",
             "pillar": "cloud-architecture",
             "scheduled_for": str(date.today()),
-            "notes": "",
+            "notes": free_topic,  # Full prompt goes in notes for the LLM
         }
         click.echo(f"Generating draft for: {free_topic}")
         draft = generate_topic_draft(topic, cfg.llm.model_dump())
