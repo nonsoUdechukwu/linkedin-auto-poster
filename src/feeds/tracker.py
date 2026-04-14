@@ -116,6 +116,7 @@ class FeatureTracker:
 
     def __init__(self, data_dir: str | Path = "data"):
         self.path = Path(data_dir) / "features.json"
+        self.path.parent.mkdir(parents=True, exist_ok=True)
 
     # -- Unlocked helpers (caller already holds _file_lock) --
 

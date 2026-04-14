@@ -89,6 +89,8 @@ def sanitize_draft(text: str) -> str:
     Fixes mechanical issues that the LLM consistently generates
     despite prompt instructions. Logs when changes are made.
     """
+    if not isinstance(text, str):
+        return str(text) if text else ""
     original = text
 
     # Replace em/en dashes with commas
@@ -167,6 +169,8 @@ def validate_draft(text: str, source_url: str = "", hashtags: list[str] | None =
     5. Emoji check
     6. Source link presence
     """
+    if not isinstance(text, str):
+        text = str(text) if text else ""
     result = ValidationResult()
 
     # 1. Character count
