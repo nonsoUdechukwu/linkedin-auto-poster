@@ -48,7 +48,7 @@ filter:
   # Maximum drafts per run (prevents flooding). Default: 5.
   max_posts_per_run: 5
   # Score threshold for standalone posts. Items below this go into roundups.
-  # Raise this if you get too many standalone posts. Default: 7.
+  # Raise this if you get too many standalone posts. Default: 12.
   standalone_threshold: 12
 
 # --- LLM Configuration ---

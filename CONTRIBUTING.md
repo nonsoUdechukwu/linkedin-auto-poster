@@ -7,9 +7,11 @@ Thanks for your interest in contributing to LinkedIn Auto-Poster!
 1. **Fork** this repository
 2. **Clone** your fork:
    ```bash
-   git clone https://github.com/your-username/linkedin-auto-poster.git
+   git clone https://github.com/<your-github-username>/linkedin-auto-poster.git
    cd linkedin-auto-poster
    ```
+
+   Replace `<your-github-username>` with your actual GitHub username.
 3. **Set up** your development environment:
    ```bash
    python -m venv .venv

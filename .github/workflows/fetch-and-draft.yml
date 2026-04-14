@@ -49,6 +49,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Bootstrap config
+        run: |
+          [ -f config.yaml ] || cp config.example.yaml config.yaml
+          [ -f content-topics.yaml ] || cp content-topics.example.yaml content-topics.yaml
+
       - name: Bootstrap workspace
         run: |
           mkdir -p data drafts
@@ -69,6 +74,7 @@ jobs:
         run: python main.py draft
 
       - name: Generate topic drafts
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}

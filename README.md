@@ -86,11 +86,13 @@ Setting up a LinkedIn developer app is the most involved step. Here's a walkthro
 
 ## Quick Start
 
-### 1. Clone and install
+### 1. Fork and clone
+
+> **First:** Click the **Fork** button at the top-right of this repo to create your own copy. All commands below assume you're working from your fork.
 
 **Linux / macOS:**
 ```bash
-git clone https://github.com/your-username/linkedin-auto-poster.git
+git clone https://github.com/<your-github-username>/linkedin-auto-poster.git
 cd linkedin-auto-poster
 python3 -m venv .venv
 source .venv/bin/activate
@@ -99,12 +101,14 @@ pip install -r requirements.txt
 
 **Windows:**
 ```powershell
-git clone https://github.com/your-username/linkedin-auto-poster.git
+git clone https://github.com/<your-github-username>/linkedin-auto-poster.git
 cd linkedin-auto-poster
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
+Replace `<your-github-username>` with your actual GitHub username (the one you see at `github.com/<your-github-username>`).
 
 ### 2. Initialize workspace
 
@@ -141,6 +145,18 @@ Edit `src/drafts/voice_profile.md`:
 - Update the topic pillars, hashtags, and technical examples
 - Add your own writing quirks and patterns
 
+**Minimum changes to get started (change these 8 things first):**
+1. `[YOUR NAME]` — your actual name (appears ~15 times)
+2. `[YOUR ROLE]` — your job title
+3. `[YOUR COMPANY]` — your employer
+4. `[X]` years — your experience
+5. Hashtags list (line 102) — pick tags for YOUR niche
+6. Topic pillars (line 117-120) — YOUR content areas
+7. Technical examples (line 82-84) — tools YOU actually use
+8. CTA patterns (line 109-112) — YOUR repo URL
+
+Everything else can stay as-is for your first draft. Refine later.
+
 The more specific you are, the more human your posts will sound. Study your own emails, messages, and existing posts for patterns.
 
 ### 5. Get LinkedIn access token
@@ -156,7 +172,32 @@ To also set the GitHub Actions secret automatically:
 python scripts/linkedin_setup.py --set-secret
 ```
 
-### 6. Test it
+### 6. Authenticate for AI (local development)
+
+The Copilot SDK needs authentication to generate drafts. For local development, choose one:
+
+**Option A: GitHub CLI (recommended)**
+```bash
+gh auth login
+copilot auth login
+```
+
+**Option B: Environment variable**
+Add to your `.env`:
+```
+COPILOT_GITHUB_TOKEN=your_fine_grained_pat_here
+```
+See the [PAT creation steps](#a-add-secrets) for how to create this token.
+
+**Option C: Copilot CLI login**
+```bash
+copilot auth login
+```
+Follow the browser prompts.
+
+Without authentication, `python main.py draft` will fail with "All models failed".
+
+### 7. Test it
 
 ```bash
 # Fetch and score news (creates data/candidates.json)
@@ -172,7 +213,7 @@ python main.py preflight
 python main.py publish --dry-run
 ```
 
-### 7. Set up GitHub Actions (optional but recommended)
+### 8. Set up GitHub Actions (optional but recommended)
 
 GitHub Actions automates the full pipeline  - fetch, draft, PR creation, and publishing. Here's how to set it up:
 
@@ -233,7 +274,16 @@ Go to your repo → **Issues** → **Labels** → **New label**:
 
 This label is what triggers the publish workflow when you merge a PR.
 
-#### e. How the automation works once set up
+#### e. Create the `linkedin-draft` label
+
+Go to your repo → **Issues** → **Labels** → **New label**:
+- Name: `linkedin-draft`
+- Color: pick any (blue suggested)
+- Description: "Auto-generated LinkedIn draft PR"
+
+This label is automatically added to draft PRs by the workflow.
+
+#### f. How the automation works once set up
 
 ```
 Daily at 06:00 UTC (or manual trigger)
@@ -257,13 +307,22 @@ publish-approved.yml triggers:
   4. On failure: creates a GitHub issue alert
 ```
 
-#### f. Which workflows run by default
+#### g. Which workflows run by default
 
 Two workflows run on every push/PR without any configuration:
 - **tests.yml**  - runs pytest and ruff linting
 - **security.yml**  - runs pip-audit for dependency vulnerabilities
 
 All other workflows require secrets or manual setup (see the table below).
+
+### Troubleshooting your first run
+
+| What you see | What's wrong | Fix |
+|---|---|---|
+| `config.yaml not found` | Didn't run init | `python scripts/init.py` |
+| `All models failed` | No Copilot auth | Run `gh auth login` or set `COPILOT_GITHUB_TOKEN` in `.env` |
+| `No candidates to draft` | No matching news items | Lower `standalone_threshold` in config.yaml or check your `include_keywords` |
+| `Missing LINKEDIN_ACCESS_TOKEN` | Didn't run OAuth setup | `python scripts/linkedin_setup.py` |
 
 ## How Scoring Works
 

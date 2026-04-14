@@ -22,7 +22,7 @@ class FilterConfig(BaseModel):
     exclude_keywords: list[str] = Field(default_factory=list)
     min_significance_score: int = 3
     max_posts_per_run: int = 5
-    standalone_threshold: int = 7
+    standalone_threshold: int = 12
 
 
 class LLMConfig(BaseModel):
