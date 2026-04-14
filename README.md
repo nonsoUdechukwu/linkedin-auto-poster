@@ -465,6 +465,8 @@ github_releases:                 # Optional: monitor specific repos
     min_release_type: "minor"
 ```
 
+> **Note:** `author_name` and `github_releases` are read directly from YAML outside the validated schema. All other sections (`feeds`, `filter`, `llm`, `linkedin`, `publish`) are validated via Pydantic on load.
+
 ### CLI Commands
 
 | Command | Description |
@@ -509,14 +511,14 @@ The `token-reminder.yml` workflow creates a GitHub issue when your token is with
 | State files missing | First run | Run `python scripts/init.py` |
 | "All models failed" error | Copilot SDK authentication issue | Ensure `GITHUB_TOKEN` is set and your Copilot subscription is active |
 | Draft validation fails | Post too short, banned phrases, PII detected | Check the validation errors in the log output  - the validator lists specific issues |
-| PR not triggering publish | Missing `approve-post` label | Add the label before or after merging  - the workflow checks for it |
+| PR not triggering publish | Missing `approve-post` label | Add the label before merging  - the workflow checks for it |
 
 ## Security
 
 - No secrets in code  - everything via environment variables or GitHub Secrets
 - Content validation catches PII, customer names, monetary amounts, credentials
-- SSRF protection on article fetching (private IP blocking)
-- SHA-pinned GitHub Actions for supply chain security
+- SSRF protection on research tools (private IP blocking)
+- SHA-pinned GitHub Actions where possible
 - Prompt injection protection with XML-style data delimiters
 - URL domain allowlist for linked content
 - File guard on publish: only `drafts/*.md` changes trigger posting

@@ -4,9 +4,9 @@
 name: LinkedIn Token Expiry Reminder
 
 on:
-  schedule:
-    # Run on the 1st and 15th of every month at 08:00 UTC
-    - cron: '0 8 1,15 * *'
+  # schedule:
+  #   # Run on the 1st and 15th of every month at 08:00 UTC
+  #   - cron: '0 8 1,15 * *'
   workflow_dispatch: {}
 
 permissions:

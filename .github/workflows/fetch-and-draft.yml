@@ -40,6 +40,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Bootstrap workspace
+        run: |
+          mkdir -p data drafts
+
       - name: Set up blocked names
         run: |
           if [ -n "${{ secrets.BLOCKED_NAMES }}" ]; then

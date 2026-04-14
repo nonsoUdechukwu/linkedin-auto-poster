@@ -10,7 +10,7 @@ Do NOT open a public issue for security vulnerabilities.
 ## Security Measures
 
 - All secrets managed via environment variables (never committed)
-- SSRF protection on HTTP fetches (private IP blocking, DNS timeout)
+- SSRF protection on research tools (private IP blocking, DNS timeout)
 - Content validation for PII, customer names, sensitive data
-- SHA-pinned GitHub Actions dependencies
+- SHA-pinned GitHub Actions where possible
 - Prompt injection protection with data delimiters
