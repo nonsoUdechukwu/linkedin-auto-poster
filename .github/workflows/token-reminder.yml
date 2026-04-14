@@ -1,3 +1,6 @@
+# NOTE: This workflow creates reminder issues when your LinkedIn access token
+# is about to expire. Requires GITHUB_TOKEN with issues:write permission.
+# LinkedIn tokens expire every ~60 days. Disable if not using LinkedIn.
 name: LinkedIn Token Expiry Reminder
 
 on:

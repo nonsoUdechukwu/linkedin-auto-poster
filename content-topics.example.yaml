@@ -2,12 +2,20 @@
 # These generate opinion/thought-leadership posts on specific dates.
 # Copy to content-topics.yaml and customize.
 #
-# Fields:
-#   slug: unique identifier
-#   title: post topic
-#   scheduled_for: date to generate draft (YYYY-MM-DD)
-#   status: planned | drafted | posted
-#   prompt_hint: guidance for the AI on angle/focus
+# Fields (used by main.py draft-topic and src/drafts/drafter.py):
+#   id:            Unique identifier for this topic. Used in draft filenames
+#                  and to track status. Must be unique across all topics.
+#   title:         The post topic. Passed to the AI as the writing subject.
+#   scheduled_for: Date to generate the draft (YYYY-MM-DD). The draft-topic
+#                  command only generates drafts within the --days-ahead window.
+#   status:        planned | drafted | posted. The draft-topic command skips
+#                  topics that are not "planned". Status updates automatically.
+#   pattern:       Writing pattern from voice_profile.md. Controls the post
+#                  structure. Values: observation | lessons | share | showcase | reflection
+#   pillar:        Content pillar / category. Used in frontmatter for tracking.
+#                  Examples: cloud-architecture, career, iac-devops, security
+#   notes:         Free-text guidance for the AI. Describe the angle, key points,
+#                  or context. This is injected into the prompt as SOURCE_DATA.
 
 topics:
   - id: iac-best-practices

@@ -2,6 +2,17 @@
 
 State files live in data/seen.json and data/published.json on the main branch.
 All operations are idempotent: adding an already-seen item is a no-op.
+
+StateStore provides structured memory for the AI pipeline:
+  - seen.json: tracks which articles have been processed (prevents re-drafting)
+  - published.json: tracks which drafts were posted to LinkedIn (with metadata
+    for LLM context — summaries, tags, tools mentioned)
+  - token_refreshed_at.txt: timestamp of last LinkedIn token use
+
+File locking:
+  Cross-process safety via _file_lock (OS-level exclusive file creation).
+  Stale locks (older than 30s) are force-removed. All writes are atomic
+  (write to temp file, then os.replace) to prevent corruption on crash.
 """
 
 from __future__ import annotations

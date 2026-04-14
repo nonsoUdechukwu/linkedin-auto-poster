@@ -2,223 +2,442 @@
 
 Automatically generate and publish LinkedIn posts from industry news, powered by AI.
 
-> Built by a cloud architect who wanted to share Azure news without spending hours writing posts.
-> This tool fetches news from RSS feeds, generates human-sounding drafts using AI, and publishes
-> them through a GitHub PR approval workflow — so you stay in control of what gets posted.
+I built this because I wanted to stay active on LinkedIn without spending hours writing posts. As a cloud architect, I follow dozens of Azure, Kubernetes, and Terraform feeds daily — this tool turns that firehose into polished, human-sounding LinkedIn posts that go through a PR-based approval workflow before anything gets published.
+
+It was built for Azure/cloud news, but the feeds, scoring keywords, and voice profile are all configurable. You can adapt it for frontend development, data science, security, DevOps, or any other niche.
 
 ## How It Works
 
 ```
-RSS Feeds ──┐
-             ├─→ Fetch & Score ──→ Research Agent ──→ AI Draft ──→ Critic Review
-GitHub      ─┘       │                  │                │              │
-Releases              │            (Learn search,   (Claude Opus)  (GPT-5.4)
-                      │          Terraform verify)       │              │
-                      │                                  └──────┬───────┘
-                      │                                         │
-                      └──→ Sanitize & Validate ←────────────────┘
-                                    │
-                              GitHub PR
-                                    │
-                           Human Approval
-                          (approve-post label)
-                                    │
-                              LinkedIn API
+RSS Feeds / GitHub Releases
+            |
+      Fetch & Score
+            |
+     Research Agent
+     (article fetch, Learn search,
+      Terraform verify)
+            |
+     AI Draft (Claude Opus)
+            |
+     Critic Review (GPT-5.4)
+            |
+   Sanitize & Validate
+   (banned phrases, PII,
+    anti-AI detection)
+            |
+        GitHub PR
+    (one per draft, rich preview)
+            |
+     Human Approval
+   (add 'approve-post' label,
+    then merge)
+            |
+       LinkedIn API
 ```
 
 ### Example Use Case
 
-I built this to automatically track Azure and cloud infrastructure news and draft LinkedIn posts
-in my voice. Here's what a typical day looks like:
+Here's how I use it for Azure news:
 
-1. **06:00 UTC** — GitHub Actions fetches latest Azure Updates, Kubernetes blog, Terraform releases
-2. **Scoring** — Each item scored by relevance (AKS, Landing Zones, IaC = high score for me)
-3. **Research** — AI agent fetches source articles, verifies claims against Microsoft Learn docs
+1. **06:00 UTC** — GitHub Actions fetches the latest Azure Updates, Kubernetes blog, Terraform releases
+2. **Scoring** — Each item is scored by relevance (AKS, Landing Zones, IaC = high score for me)
+3. **Research** — An AI agent fetches source articles and verifies claims against Microsoft Learn docs
 4. **Drafting** — Claude Opus generates a post in my writing style; GPT-5.4 critiques it
 5. **Validation** — Banned AI phrases removed, PII checked, technical claims verified
-6. **PR created** — One PR per draft with full preview. I review on my phone.
+6. **PR created** — One PR per draft with full preview. I review on my phone
 7. **Approve & Post** — Add `approve-post` label, merge → auto-publishes to LinkedIn
 
 ### Adapting for Your Use Case
 
-This isn't Azure-specific — you can adapt it for any industry:
+This is not Azure-specific. Update `config.yaml` with your feeds and keywords, and `src/drafts/voice_profile.md` with your writing style.
 
-| Use Case | Feeds | Scoring Keywords |
-|----------|-------|-----------------|
-| Azure/Cloud (default example) | Azure Blog, K8s, Terraform | AKS, Landing Zone, Bicep |
+| Use Case | Example Feeds | Scoring Keywords |
+|---|---|---|
+| Azure/Cloud (default) | Azure Blog, K8s, Terraform | AKS, Landing Zone, Bicep |
 | Frontend Dev | React Blog, CSS-Tricks, Smashing | React, Next.js, CSS |
-| Data Science | Towards Data Science, Papers With Code | PyTorch, LLM, MLOps |
+| Data Science | Papers With Code, Towards DS | PyTorch, LLM, MLOps |
 | Security | Krebs on Security, The Hacker News | CVE, Zero-day, SIEM |
-| DevOps | DORA blog, DevOps.com, CNCF | CI/CD, GitOps, Platform |
-
-Just update `config.yaml` with your feeds and `src/drafts/voice_profile.md` with your writing style.
+| DevOps | DORA blog, CNCF, DevOps.com | CI/CD, GitOps, Platform |
 
 ## Prerequisites
 
-| Requirement | Why | How to Get |
-|-------------|-----|------------|
-| Python 3.12+ | Runtime | [python.org](https://python.org) |
-| GitHub account | PR workflow, Actions | [github.com](https://github.com) |
-| GitHub Copilot subscription | AI model access (Claude, GPT) | [GitHub Copilot](https://github.com/features/copilot) |
-| LinkedIn Developer App | Post to LinkedIn | [LinkedIn Developer Portal](https://developer.linkedin.com) |
+| Requirement | Why | How to Get | Notes |
+|---|---|---|---|
+| Python 3.12+ | Runtime | [python.org](https://python.org) | 3.13+ also works |
+| GitHub account | PR workflow, Actions, API | [github.com](https://github.com) | Free tier works |
+| GitHub Copilot subscription | AI model access via Copilot SDK | [github.com/features/copilot](https://github.com/features/copilot) | Required for Claude/GPT access. Individual, Business, or Enterprise plan. |
+| LinkedIn Developer App | Posting to LinkedIn | [developer.linkedin.com](https://developer.linkedin.com) | Requires a LinkedIn company page. "Share on LinkedIn" product must be approved. |
+| Git | Version control | [git-scm.com](https://git-scm.com) | |
 
-### LinkedIn Developer App Setup
+> **Note:** The AI models (Claude Opus, GPT-5.4) are accessed through the GitHub Copilot SDK — you do not need separate OpenAI or Anthropic API keys.
 
-1. Go to [LinkedIn Developer Portal](https://developer.linkedin.com/apps)
-2. Create a new app (company page required)
-3. Under **Auth**, add redirect URL: `http://localhost:8080/callback`
-4. Under **Products**, request access to **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**
-5. Note your Client ID and Client Secret
+## LinkedIn Developer App Setup
 
-> ⚠️ LinkedIn's API access can be restrictive. The "Share on LinkedIn" product is required for
-> posting. Approval may take a few days.
+Setting up a LinkedIn developer app is the most involved step. Here's a walkthrough:
+
+1. **Create the app** at [developer.linkedin.com/apps](https://developer.linkedin.com/apps). Click "Create app."
+2. **Company page required** — LinkedIn requires every developer app to be associated with a company page. If you don't have one, create a LinkedIn company page first (you can use your personal brand name).
+3. **Auth tab** — After creating the app, go to the **Auth** tab and add `http://localhost:8080/callback` as an authorized redirect URL.
+4. **Products tab** — Request access to:
+   - **Share on LinkedIn** (required for posting)
+   - **Sign In with LinkedIn using OpenID Connect** (required for authentication)
+5. **Wait for approval** — Product access can take a few hours to a few days. You can check the status on the Products tab.
+6. **Copy credentials** — From the **Auth** tab, copy your **Client ID** and **Client Secret**. You'll need these for the `.env` file.
+
+> **Warning:** LinkedIn's API access can be restrictive. The "Share on LinkedIn" product is required for posting. If your app doesn't have it approved, the publish step will fail with a 403 error.
 
 ## Quick Start
 
-### 1. Clone and configure
+### 1. Clone and install
 
+**Linux / macOS:**
 ```bash
 git clone https://github.com/your-username/linkedin-auto-poster.git
 cd linkedin-auto-poster
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
-
-# Install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Initialize workspace (copies example configs)
+**Windows:**
+```powershell
+git clone https://github.com/your-username/linkedin-auto-poster.git
+cd linkedin-auto-poster
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### 2. Initialize workspace
+
+```bash
 python scripts/init.py
 ```
 
-### 2. Configure your settings
+This copies the example configs to their working locations:
+- `config.example.yaml` → `config.yaml`
+- `.env.example` → `.env`
+- `content-topics.example.yaml` → `content-topics.yaml`
+
+### 3. Configure your settings
 
 Edit `config.yaml`:
 - Set `author_name` to your name
 - Add RSS feeds for your industry
-- Adjust scoring keywords and thresholds
-- Optionally add GitHub repos to monitor for releases
+- Adjust `filter.include_keywords` and `filter.exclude_keywords`
+- Set `filter.standalone_threshold` (default 12 — lower for more standalone posts)
+- Optionally add GitHub repos to monitor under `github_releases`
 
 Edit `.env`:
-- Add your LinkedIn credentials
-- Add your GitHub token
+- Add your LinkedIn credentials (`LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`)
+- Add your GitHub token (`GITHUB_TOKEN`)
+- Set `GITHUB_USER` to your GitHub username (for repo monitoring)
 
-### 3. Customize your voice
+### 4. Customize your voice
 
 Edit `src/drafts/voice_profile.md`:
-- Replace `[YOUR NAME]` with your name
+- Replace all `[YOUR NAME]` placeholders with your name
 - Replace `[YOUR ROLE]` with your job title
 - Replace `[YOUR COMPANY]` with your employer
-- Add your writing quirks, favorite phrases, typical post structure
-- The more specific, the more human your posts will sound
+- Replace `[X]` years with your actual experience
+- Update the topic pillars, hashtags, and technical examples
+- Add your own writing quirks and patterns
 
-### 4. Get LinkedIn access token
+The more specific you are, the more human your posts will sound. Study your own emails, messages, and existing posts for patterns.
+
+### 5. Get LinkedIn access token
 
 ```bash
 python scripts/linkedin_setup.py
 ```
 
-Follow the browser prompts to authorize. The token will be saved to your `.env`.
+This opens your browser for LinkedIn authorization, captures the callback, exchanges the auth code for an access token, verifies it works, and updates your `.env` file.
 
-### 5. Test it
+To also set the GitHub Actions secret automatically:
+```bash
+python scripts/linkedin_setup.py --set-secret
+```
+
+### 6. Test it
 
 ```bash
-# Fetch news (dry run — no posts created)
+# Fetch and score news (creates data/candidates.json)
 python main.py fetch
 
-# Generate drafts (creates markdown files, no LinkedIn posting)
+# Generate AI drafts (creates files in drafts/)
 python main.py draft
 
-# Check LinkedIn auth
+# Check LinkedIn auth health
 python main.py preflight
 
-# Preview what would be posted
+# Preview what would be posted (shows full post body)
 python main.py publish --dry-run
 ```
 
-### 6. Set up GitHub Actions (optional)
+### 7. Set up GitHub Actions (optional)
 
 For automated daily runs:
 
 1. Push to GitHub
-2. Add secrets in repo Settings → Secrets:
+2. Add secrets in repo **Settings → Secrets and variables → Actions**:
    - `LINKEDIN_CLIENT_ID`
    - `LINKEDIN_CLIENT_SECRET`
    - `LINKEDIN_ACCESS_TOKEN`
-3. Enable the `fetch-and-draft` workflow
-4. Uncomment the cron schedule in `.github/workflows/fetch-and-draft.yml`
+3. Uncomment the cron schedule in `.github/workflows/fetch-and-draft.yml`
+4. The `publish-approved.yml` workflow triggers automatically when you add the `approve-post` label to a PR and merge it
+
+## How Scoring Works
+
+Every news item from RSS feeds goes through a scoring pipeline before drafting:
+
+1. **Exclude keywords** — Any match → item is immediately dropped (score 0)
+2. **Include keywords** — Count how many include keywords appear in the title + summary + categories. Zero matches → dropped.
+3. **Update type weight** — Classified from the text:
+   - GA / "generally available" / "launched" → weight 3
+   - Public preview → weight 2
+   - Retirement / deprecated → weight 2
+   - Private preview → weight 1
+   - Blog / notice → weight 1
+4. **Category double-weighting** — Keywords found in RSS categories are counted separately and added again (categories are more reliable signals than free text)
+5. **Final score** = `type_weight + include_hits + category_hits`
+6. **Standalone threshold** — Items scoring ≥ `standalone_threshold` (default: 12) get their own dedicated post. Items below that go into a weekly roundup post.
+7. **High-relevance preview override** — Public previews matching high-relevance keywords (AKS, Landing Zone, Terraform, AI Foundry, etc.) are promoted to standalone even if below threshold (max 2 per run).
+8. **Dedup** — Items are deduplicated by normalized URL and title hash against the seen state in `data/seen.json`.
+9. **Age cutoff** — Items older than `dedup_window_days` (default: 7) are skipped.
+
+Tune these settings in `config.yaml` under the `filter:` section.
+
+## How the Approval Workflow Works
+
+The approval workflow ensures you review every post before it goes to LinkedIn:
+
+1. **Draft generation** — The `fetch-and-draft` workflow (or manual `python main.py draft`) generates markdown draft files in the `drafts/` directory.
+2. **PR creation** — One PR is created per draft, with a rich preview in the PR body showing exactly what will be posted.
+3. **Review** — You review the PR. The full post text is visible in the PR description. You can edit the draft by clicking "Files changed" and using the pencil icon.
+4. **Approve** — Add the `approve-post` label to the PR.
+5. **Merge** — Merge the PR into `main`.
+6. **Publish** — The `publish-approved.yml` workflow triggers automatically on merge. It checks that the PR has the `approve-post` label and that only files in `drafts/` were changed (security guard).
+7. **File guard** — If the PR contains changes to any file outside `drafts/`, publishing is blocked and a security issue is created.
+
+Drafts that are not approved within 7 days are automatically closed by the workflow.
+
+## Content Calendar
+
+The content calendar (`content-topics.yaml`) lets you schedule opinion and thought-leadership posts on specific dates, separate from the news pipeline.
+
+### Fields
+
+| Field | Required | Description |
+|---|---|---|
+| `id` | Yes | Unique identifier (used in filenames and status tracking) |
+| `title` | Yes | Post topic — passed to the AI as the writing subject |
+| `scheduled_for` | Yes | Date to generate draft (YYYY-MM-DD) |
+| `status` | Yes | `planned` / `drafted` / `posted` — only `planned` topics are drafted |
+| `pattern` | Yes | Writing pattern from voice profile: `observation`, `lessons`, `share`, `showcase`, `reflection` |
+| `pillar` | Yes | Content category: `cloud-architecture`, `career`, `iac-devops`, `security`, etc. |
+| `notes` | No | Free-text guidance for the AI — describe the angle, key points, or context |
+
+### Usage
+
+```bash
+# Draft all planned topics within the next 7 days
+python main.py draft-topic
+
+# Draft a specific topic by ID
+python main.py draft-topic --id iac-best-practices
+
+# Draft from a free-text topic (no topics file needed)
+python main.py draft-topic --topic "Why I switched from Helm to Kustomize"
+```
+
+## Voice Profile
+
+The file `src/drafts/voice_profile.md` controls how the AI writes. It defines:
+
+- **Writing patterns** — How to structure different post types (observation, lessons, share, showcase, reflection)
+- **Technical depth** — What level of specificity to use
+- **Formatting rules** — No emoji, no em dashes, hashtag limits, character counts
+- **Banned patterns** — AI-sounding phrases that trigger validation failures
+- **Anti-uniformity rules** — Prevent every post from having the same 4-paragraph structure
+
+The `pattern` field in content topics maps to a section in the voice profile. The AI uses that section to decide the post's structure.
+
+The validator (`src/drafts/validator.py`) enforces these rules programmatically. It catches:
+- Banned phrases (50+ AI-sounding patterns)
+- Emoji and em/en dashes
+- PII (emails, phone numbers, IP addresses, credentials)
+- Customer/company names (from `data/blocked-names.txt`)
+- URLs from unapproved domains
 
 ## Architecture
 
 ```
+linkedin-auto-poster/
 ├── src/
-│   ├── feeds/           # News fetching & scoring
-│   │   ├── fetcher.py         # RSS feed fetcher with retry
-│   │   ├── filter.py          # Relevance scoring & dedup
-│   │   ├── article_fetcher.py # Full article content extraction
-│   │   ├── research_agent.py  # AI research agent (Copilot SDK)
-│   │   ├── research_tools.py  # Article fetch, Learn search, Terraform verify
-│   │   ├── github_releases.py # GitHub Releases tracking
-│   │   ├── repo_monitor.py    # New repo detection
-│   │   └── tracker.py         # Feature lifecycle tracking
-│   ├── drafts/          # Post generation
-│   │   ├── drafter.py         # Dual-model AI pipeline
-│   │   ├── copilot_client.py  # GitHub Copilot SDK wrapper
-│   │   ├── validator.py       # Content safety & anti-AI detection
-│   │   └── voice_profile.md   # Your writing style guide (customize!)
-│   └── linkedin/        # Publishing
-│       └── client.py          # LinkedIn API client
-├── main.py              # CLI entry point
-├── config.example.yaml  # Configuration template
-├── content-topics.example.yaml  # Content calendar template
+│   ├── __init__.py            # StateStore: seen/published state with file locking
+│   ├── feeds/                 # News fetching, scoring, research
+│   │   ├── __init__.py        # Pydantic config model (AppConfig)
+│   │   ├── fetcher.py         # RSS feed fetcher with retry + normalization
+│   │   ├── filter.py          # Relevance scoring, dedup, threshold routing
+│   │   ├── article_fetcher.py # Full article content extraction via HTTP
+│   │   ├── research_agent.py  # Copilot SDK agentic research (tools enabled)
+│   │   ├── research_tools.py  # Tool definitions: article fetch, Learn search, Terraform verify
+│   │   ├── github_releases.py # GitHub Releases tracking (new versions)
+│   │   ├── repo_monitor.py    # New repo detection (for showcase posts)
+│   │   └── tracker.py         # Feature lifecycle tracking (preview → GA → deprecated)
+│   ├── drafts/                # Post generation and validation
+│   │   ├── __init__.py
+│   │   ├── drafter.py         # Dual-model AI pipeline (draft + critique + validate)
+│   │   ├── copilot_client.py  # Copilot SDK wrapper (raw generation, no tools)
+│   │   ├── validator.py       # Content safety: banned phrases, PII, anti-AI detection
+│   │   └── voice_profile.md   # Your writing style guide (customize this!)
+│   └── linkedin/              # Publishing
+│       ├── __init__.py
+│       └── client.py          # LinkedIn API client: OAuth, token refresh, post creation
+├── main.py                    # CLI entry point (click commands)
+├── config.example.yaml        # Configuration template
+├── content-topics.example.yaml # Content calendar template
+├── .env.example               # Environment variables template
 ├── scripts/
-│   ├── linkedin_setup.py    # OAuth setup helper
-│   ├── linkedin_preflight.py # Auth validation
-│   ├── preview_drafts.py    # PR preview generator
-│   └── init.py              # Workspace initializer
+│   ├── init.py                # Workspace initializer (copies example configs)
+│   ├── linkedin_setup.py      # Interactive OAuth setup (browser-based)
+│   ├── linkedin_preflight.py  # Auth validation (credentials + token + API)
+│   └── preview_drafts.py      # PR preview generator (markdown for PR body)
+├── data/                      # State files (gitignored except structure)
+│   ├── seen.json              # Processed article URLs and title hashes
+│   ├── published.json         # Published draft metadata (LLM memory)
+│   ├── features.json          # Feature lifecycle state
+│   ├── known_repos.json       # Known GitHub repos (for new repo detection)
+│   └── token_refreshed_at.txt # Last LinkedIn token use timestamp
+├── drafts/                    # Generated draft markdown files
+├── tests/                     # pytest test suite
 └── .github/workflows/
-    ├── fetch-and-draft.yml     # Daily news → draft pipeline
-    ├── publish-approved.yml    # Label-approved → LinkedIn
-    ├── preflight.yml           # Auth health check
-    └── token-reminder.yml      # Token expiry alerts
+    ├── tests.yml              # Runs pytest + ruff on push/PR
+    ├── security.yml           # pip-audit dependency scanning
+    ├── fetch-and-draft.yml    # Fetches news, generates drafts, creates PRs
+    ├── publish-approved.yml   # Posts approved drafts to LinkedIn on PR merge
+    ├── preflight.yml          # Manual LinkedIn auth health check
+    ├── token-reminder.yml     # Bi-monthly token expiry alerts
+    └── copilot-setup-steps.yml # Copilot coding agent environment setup
 ```
+
+## GitHub Actions Workflows
+
+| Workflow | Trigger | What it does | Active by default |
+|---|---|---|---|
+| `tests.yml` | push, PR | Runs pytest + ruff | Yes |
+| `security.yml` | push, PR, weekly cron | pip-audit dependency scanning | Yes |
+| `fetch-and-draft.yml` | manual / cron (commented) | Fetches news, generates drafts, creates PRs | Manual only |
+| `publish-approved.yml` | PR merge with `approve-post` label | Posts approved drafts to LinkedIn | Requires secrets |
+| `preflight.yml` | manual | Checks LinkedIn auth health | Requires secrets |
+| `token-reminder.yml` | bi-monthly cron | Creates issue if LinkedIn token is expiring | Requires secrets |
+| `copilot-setup-steps.yml` | push to workflow file | Sets up Copilot coding agent environment | Yes |
 
 ## Configuration Reference
 
 ### Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
-| `LINKEDIN_CLIENT_ID` | Yes | LinkedIn app client ID |
-| `LINKEDIN_CLIENT_SECRET` | Yes | LinkedIn app client secret |
-| `LINKEDIN_ACCESS_TOKEN` | Yes | OAuth access token |
-| `LINKEDIN_REFRESH_TOKEN` | No | Refresh token (if app tier supports) |
-| `GITHUB_TOKEN` | Yes | GitHub PAT for API access |
-| `GITHUB_USER` | No | Override GitHub username for repo monitoring |
-| `AUTHOR_NAME` | No | Override author name (default: from config.yaml) |
+|---|---|---|
+| `LINKEDIN_CLIENT_ID` | Yes | LinkedIn app client ID (from Auth tab) |
+| `LINKEDIN_CLIENT_SECRET` | Yes | LinkedIn app client secret (from Auth tab) |
+| `LINKEDIN_ACCESS_TOKEN` | Yes | OAuth access token (from `scripts/linkedin_setup.py`) |
+| `LINKEDIN_REFRESH_TOKEN` | No | Refresh token (only for certain LinkedIn app tiers) |
+| `GITHUB_TOKEN` | Yes | GitHub API access (releases, repo monitoring). Alias: `GH_TOKEN` |
+| `GITHUB_USER` | No | GitHub username for repo monitoring. Fallback: `GITHUB_ACTOR` |
+| `AUTHOR_NAME` | No | Override author name (default: from `config.yaml`) |
+
+### config.yaml Reference
+
+```yaml
+author_name: "Your Name"        # Used in AI prompts
+
+feeds:                           # RSS/Atom feeds to monitor
+  - name: "Feed Name"
+    url: "https://..."
+
+filter:
+  include_keywords: [...]        # Must match at least one
+  exclude_keywords: [...]        # Any match → item dropped
+  min_significance_score: 3      # Minimum score to keep
+  max_posts_per_run: 5           # Cap on drafts per run
+  standalone_threshold: 12       # Score for standalone post (vs roundup)
+
+llm:
+  provider: "azure_openai"
+  model: "gpt-4o"
+  temperature: 0.7
+  max_tokens: 500
+
+linkedin:
+  visibility: "PUBLIC"           # PUBLIC or CONNECTIONS
+  max_post_length: 1500
+
+publish:
+  max_age_days: 7                # Skip stale drafts
+  dry_run: false                 # Preview mode
+
+github_releases:                 # Optional: monitor specific repos
+  - repo: "owner/repo"
+    name: "Display Name"
+    min_release_type: "minor"
+```
 
 ### CLI Commands
 
 | Command | Description |
-|---------|-------------|
+|---|---|
 | `python main.py fetch` | Fetch and score news from configured feeds |
 | `python main.py draft` | Generate AI drafts for top-scoring items |
 | `python main.py draft-topic` | Generate scheduled topic/opinion posts |
-| `python main.py draft-repo` | Draft posts about new repos |
-| `python main.py publish` | Publish approved posts to LinkedIn |
-| `python main.py publish --dry-run` | Preview without posting |
+| `python main.py draft-topic --topic "Free text"` | Generate from ad-hoc topic |
+| `python main.py draft-repo` | Draft posts about new GitHub repos |
+| `python main.py draft-repo --repo owner/name` | Draft about a specific repo |
+| `python main.py publish` | Publish approved drafts to LinkedIn |
+| `python main.py publish --dry-run` | Preview full post body without posting |
 | `python main.py preflight` | Check LinkedIn auth status |
+
+## Token Renewal
+
+LinkedIn access tokens expire every ~60 days. Here's how to renew:
+
+1. Make sure `.env` has your `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET`
+2. Run the setup script:
+   ```bash
+   python scripts/linkedin_setup.py
+   ```
+3. Authorize in the browser when prompted
+4. The script will verify the new token and update your `.env`
+
+For GitHub Actions, also update the secret:
+```bash
+python scripts/linkedin_setup.py --set-secret
+```
+
+The `token-reminder.yml` workflow creates a GitHub issue when your token is within 14 days of expiring. It checks the timestamp in `data/token_refreshed_at.txt`.
+
+## Troubleshooting
+
+| Problem | Cause | Fix |
+|---|---|---|
+| `preflight` fails | Missing or expired access token | Run `python scripts/linkedin_setup.py` |
+| No drafts generated | No new items above threshold | Lower `standalone_threshold` in `config.yaml`, or check your `include_keywords` |
+| Repo monitoring skipped | `GITHUB_USER` not set | Set `GITHUB_USER` in `.env` for local runs |
+| Publish fails with 403 | Expired LinkedIn token or missing "Share on LinkedIn" product | Renew via `linkedin_setup.py`; check LinkedIn app Products tab |
+| State files missing | First run | Run `python scripts/init.py` |
+| "All models failed" error | Copilot SDK authentication issue | Ensure `GITHUB_TOKEN` is set and your Copilot subscription is active |
+| Draft validation fails | Post too short, banned phrases, PII detected | Check the validation errors in the log output — the validator lists specific issues |
+| PR not triggering publish | Missing `approve-post` label | Add the label before or after merging — the workflow checks for it |
 
 ## Security
 
-- No secrets in code — everything via environment variables
-- Content validation catches PII, customer names, monetary amounts
+- No secrets in code — everything via environment variables or GitHub Secrets
+- Content validation catches PII, customer names, monetary amounts, credentials
 - SSRF protection on article fetching (private IP blocking)
 - SHA-pinned GitHub Actions for supply chain security
-- Prompt injection protection with data delimiters
+- Prompt injection protection with XML-style data delimiters
 - URL domain allowlist for linked content
+- File guard on publish: only `drafts/*.md` changes trigger posting
 
 ## Contributing
 

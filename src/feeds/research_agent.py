@@ -1,4 +1,24 @@
-"""Research agent for gathering verified evidence before drafting."""
+"""Research agent for gathering verified evidence before drafting.
+
+Uses the GitHub Copilot SDK in *agentic* mode (with tools enabled) to:
+  1. Fetch the source article via HTTP
+  2. Verify claims against Microsoft Learn documentation
+  3. Check if mentioned Terraform resources exist in the registry
+
+Tool permissions: all three tools use skip_permission=True so the agent
+can call them freely without user confirmation prompts.
+
+Timeout: 120 seconds. If the agent times out or fails, a tool-free
+fallback fetches the source article directly via fetch_article().
+If that also fails, the original RSS summary is used as evidence.
+
+Returns an evidence dict with:
+  - article_summary: fetched/verified source text
+  - verified_claims: facts confirmed against docs
+  - unverified_claims: facts that couldn't be verified
+  - key_facts: extracted specific facts
+  - source_url: original URL
+"""
 
 from __future__ import annotations
 

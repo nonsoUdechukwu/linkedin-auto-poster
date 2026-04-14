@@ -44,29 +44,33 @@ def main() -> None:
         print(f"\nResult: {checks_passed}/{checks_total} checks passed")
         return
 
-    # Check 2: Refresh token present
+    # Check 2: Access token or refresh token present
     checks_total += 1
-    print("\n2. Checking refresh token...")
-    if client.refresh_token:
-        print("   Refresh token: configured")
+    print("\n2. Checking access token...")
+    has_access_token = bool(client.access_token)
+    has_refresh_token = bool(client.refresh_token)
+    if has_access_token:
+        print("   Access token: configured")
+        checks_passed += 1
+    elif has_refresh_token:
+        print("   Refresh token: configured (will attempt refresh)")
         checks_passed += 1
     else:
-        print("   FAIL: Missing LINKEDIN_REFRESH_TOKEN")
+        print("   FAIL: Missing LINKEDIN_ACCESS_TOKEN (or LINKEDIN_REFRESH_TOKEN)")
         print("   Run: python scripts/linkedin_setup.py")
         print(f"\nResult: {checks_passed}/{checks_total} checks passed")
         return
 
-    # Check 3: Token refresh
+    # Check 3: Validate token works (try access token first, then refresh)
     checks_total += 1
-    print("\n3. Testing token refresh...")
+    print("\n3. Testing token validity...")
     try:
-        client.refresh_access_token()
-        print("   Access token: obtained")
-        if client.refresh_token:
-            print("   New refresh token received (rotation works)")
+        client.ensure_access_token()
+        print("   Access token: valid")
         checks_passed += 1
-    except LinkedInAuthError as e:
+    except Exception as e:
         print(f"   FAIL: {e}")
+        print("   Re-run: python scripts/linkedin_setup.py")
         print(f"\nResult: {checks_passed}/{checks_total} checks passed")
         return
 

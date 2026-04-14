@@ -29,9 +29,6 @@ def generate_preview(drafts_dir: str = "drafts") -> str:
         draft_count += 1
         meta = post.metadata
         content_type = meta.get("content_type", "news")
-        scheduled = meta.get("scheduled_for", "")
-        publish = meta.get("publish", False)
-        status = "\u2705 Approved" if publish else "\u23f3 Pending review"
 
         if content_type == "topic":
             title = meta.get("topic_title", meta.get("draft_id", md_file.stem))
@@ -45,13 +42,14 @@ def generate_preview(drafts_dir: str = "drafts") -> str:
             source_line = f"**Source:** [{source_url}]({source_url})" if source_url else ""
 
         pattern = meta.get("pattern", "")
+        scheduled = meta.get("scheduled_for", "")
         schedule_line = f"\U0001f4c5 Scheduled for **{scheduled}**" if scheduled else ""
 
         section = f"""---
 
 ### {badge} {title}
 
-{status} | Pattern: `{pattern}` | File: `{md_file.relative_to(drafts_path)}`
+Pattern: `{pattern}` | File: `{md_file.relative_to(drafts_path)}`
 {schedule_line}
 {source_line}
 
@@ -61,7 +59,7 @@ def generate_preview(drafts_dir: str = "drafts") -> str:
 
 </blockquote>
 
-> **To approve:** Edit `{md_file.relative_to(drafts_path.parent)}` and change `publish: false` to `publish: true`
+> **To approve:** Add the `approve-post` label to the PR, then merge.
 """
         sections.append(section)
 
@@ -70,8 +68,9 @@ def generate_preview(drafts_dir: str = "drafts") -> str:
 
     header = f"""## \U0001f4cb LinkedIn Draft Preview
 
-**{draft_count} draft(s)** generated. Review each post below and approve the ones you want published.
+**{draft_count} draft(s)** generated. Review each post below.
 
+To approve a draft: add the `approve-post` label to the PR, then merge.
 Posts with a `scheduled_for` date will not be published until that date arrives, even after approval.
 """
 

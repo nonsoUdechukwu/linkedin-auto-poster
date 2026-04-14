@@ -1,4 +1,21 @@
-"""Filter and score news items by topic relevance."""
+"""Filter and score news items by topic relevance.
+
+Scoring algorithm:
+  1. Check exclude keywords first (any match → score 0, item dropped)
+  2. Count include keyword matches in title + summary + categories
+  3. Classify update type (GA=3, preview=2, blog/notice=1)
+  4. Count category hits separately (categories are more reliable, so they
+     effectively count double: once in include_hits, once in category_hits)
+  5. Final score = type_weight + include_hits + category_hits
+  6. Items below min_score are dropped
+  7. High-relevance previews (public preview + strong keyword) can override
+     the standalone threshold and get their own post
+
+Deduplication:
+  - Normalized URL match against seen state
+  - Title hash match (catches rephrased duplicates)
+  - Age cutoff (items older than dedup_window_days are skipped)
+"""
 
 from __future__ import annotations
 

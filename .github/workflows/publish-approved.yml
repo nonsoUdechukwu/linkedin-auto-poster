@@ -1,3 +1,7 @@
+# NOTE: This workflow requires LinkedIn secrets (LINKEDIN_CLIENT_ID,
+# LINKEDIN_CLIENT_SECRET, LINKEDIN_ACCESS_TOKEN) to publish posts.
+# It will not run successfully without them. Configure secrets in
+# repo Settings → Secrets before enabling.
 name: Publish Approved
 
 on:

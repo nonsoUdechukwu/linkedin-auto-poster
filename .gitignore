@@ -5,7 +5,7 @@ content-topics.yaml
 
 # State files (generated at runtime)
 data/
-drafts/
+/drafts/
 
 # Blocked names
 data/blocked-names.txt

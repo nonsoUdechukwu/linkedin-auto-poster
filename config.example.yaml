@@ -1,23 +1,19 @@
 # LinkedIn Auto-Poster Configuration
 # Copy this file to config.yaml and customize for your use case.
+#
+# This file is validated by the Pydantic model in src/feeds/__init__.py.
+# All sections below map to the AppConfig schema.
 
 # --- Author ---
-# Your name as it appears on LinkedIn. Used in post generation prompts.
+# Your name as it appears on LinkedIn. Used in AI prompts so posts sound like you.
+# Can also be set via the AUTHOR_NAME environment variable.
 author_name: "Your Name"
 
-# --- LLM Models ---
-# Primary model for drafting posts (best writing quality)
-draft_model: "claude-opus-4.6"
-# Critic model for reviewing drafts (fast analysis)
-critic_model: "gpt-5.4"
-# Maximum tokens for LLM responses
-max_tokens: 2000
-
 # --- News Sources ---
-# RSS feeds to monitor. Add any RSS/Atom feeds relevant to your industry.
-# Example: Azure/cloud feeds (customize for your niche)
+# RSS/Atom feeds to monitor. Each entry needs a display name and feed URL.
+# Customize these for your industry (Azure feeds shown as example).
 feeds:
-  - name: "Azure Updates"
+  - name: "Azure Updates"         # Display name shown in logs
     url: "https://azurecomcdn.azureedge.net/en-us/updates/feed/"
   - name: "Azure Blog"
     url: "https://azure.microsoft.com/en-us/blog/feed/"
@@ -25,8 +21,11 @@ feeds:
     url: "https://kubernetes.io/feed.xml"
   # Add more feeds here...
 
-# --- Filtering ---
+# --- Filtering & Scoring ---
+# Controls which news items are selected and how they are ranked.
+# See README.md "How Scoring Works" for the full algorithm.
 filter:
+  # Items must match at least one include keyword to be considered.
   include_keywords:
     - "Kubernetes"
     - "AKS"
@@ -37,34 +36,48 @@ filter:
     - "Copilot"
     - "Defender"
     - "infrastructure"
+  # Items matching any exclude keyword are dropped immediately.
   exclude_keywords:
     - "Entra"
     - "Active Directory"
     - "Microsoft 365"
     - "Teams"
     - "Intune"
+  # Minimum score to keep an item (lower = more items). Default: 3.
   min_significance_score: 3
+  # Maximum drafts per run (prevents flooding). Default: 5.
   max_posts_per_run: 5
+  # Score threshold for standalone posts. Items below this go into roundups.
+  # Raise this if you get too many standalone posts. Default: 7.
   standalone_threshold: 12
 
+# --- LLM Configuration ---
+# Settings passed to the Copilot SDK for AI text generation.
+# The provider/model here are defaults; the pipeline uses its own model
+# selection (Claude Opus for drafts, GPT-5.4 for critique) via copilot_client.py.
+llm:
+  provider: "azure_openai"  # Provider identifier (used for config, not routing)
+  model: "gpt-4o"           # Default model name
+  temperature: 0.7          # Creativity (0.0 = deterministic, 1.0 = creative)
+  max_tokens: 500           # Max tokens per LLM response
+
+# --- LinkedIn ---
+# LinkedIn post settings. These have sensible defaults.
+linkedin:
+  visibility: "PUBLIC"      # Post visibility: PUBLIC or CONNECTIONS
+  max_post_length: 1500     # Hard character limit for LinkedIn posts
+
+# --- Publishing ---
+# Controls for the publish command.
+publish:
+  max_age_days: 7           # Skip drafts older than this many days
+  dry_run: false            # Set to true to preview without posting
+
 # --- GitHub Releases (optional) ---
-# Monitor specific repos for new releases
+# Monitor specific repos for new releases. Not part of the Pydantic model;
+# read directly from the raw YAML in the fetch command.
 github_releases:
   - repo: "hashicorp/terraform-provider-azurerm"
     name: "AzureRM Terraform Provider"
-    min_release_type: "minor"
+    min_release_type: "minor"  # minor | major | patch
   # Add more repos here...
-
-# --- LinkedIn ---
-linkedin:
-  visibility: "PUBLIC"
-  max_post_length: 1500
-
-# --- Publishing ---
-publish:
-  max_age_days: 7
-  dry_run: false
-
-# --- Content Calendar (optional) ---
-# Path to content topics file for scheduled opinion/thought-leadership posts
-topics_file: "content-topics.yaml"

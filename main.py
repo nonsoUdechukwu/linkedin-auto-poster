@@ -1,4 +1,13 @@
-"""CLI entry point for linkedin-auto-poster."""
+"""CLI entry point for linkedin-auto-poster.
+
+Commands:
+  fetch       — Fetch news from RSS feeds, score, deduplicate, save candidates
+  draft       — Generate AI post drafts from fetched candidates (standalone + roundup)
+  draft-topic — Generate scheduled opinion/thought-leadership posts from content-topics.yaml
+  draft-repo  — Generate showcase posts for newly created GitHub repos
+  publish     — Publish approved drafts to LinkedIn (or --dry-run to preview)
+  preflight   — Validate LinkedIn API credentials and token health
+"""
 
 from __future__ import annotations
 
@@ -354,6 +363,9 @@ def publish(config: str, drafts_dir: str, dry_run: bool) -> None:
 
         if effective_dry_run:
             click.echo(f"  DRY RUN: {draft_id} ({len(text)} chars)")
+            click.echo("  --- Post body ---")
+            click.echo(text)
+            click.echo("  --- End post body ---")
             published += 1
             continue
 
