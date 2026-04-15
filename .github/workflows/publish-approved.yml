@@ -1,7 +1,9 @@
-# NOTE: This workflow requires LinkedIn secrets (LINKEDIN_CLIENT_ID,
-# LINKEDIN_CLIENT_SECRET, LINKEDIN_ACCESS_TOKEN) to publish posts.
-# It will not run successfully without them. Configure secrets in
-# repo Settings → Secrets before enabling.
+# NOTE: This workflow triggers on merged PRs with posting labels.
+# It requires LinkedIn secrets (LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET,
+# LINKEDIN_ACCESS_TOKEN) and will not publish without them.
+# In a template/public repo this is harmless — it exits early when
+# the PR has no posting label. Configure secrets in repo Settings →
+# Secrets before using the approve-post / post-tomorrow / post-monday labels.
 name: Publish Approved
 
 on:

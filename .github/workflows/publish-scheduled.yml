@@ -4,8 +4,10 @@
 name: Publish Scheduled Posts
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # Every hour, check for due posts
+  # Schedule disabled — template repo has no secrets configured.
+  # Uncomment to enable hourly publishing once secrets are set.
+  # schedule:
+  #   - cron: '0 * * * *'  # Every hour, check for due posts
   workflow_dispatch:
 
 permissions:
@@ -15,7 +17,7 @@ jobs:
   publish-due:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           ref: main
           fetch-depth: 0
@@ -26,7 +28,7 @@ jobs:
             git checkout origin/state -- data/ 2>/dev/null || true
           fi
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6
         with:
           python-version: "3.12"
 
