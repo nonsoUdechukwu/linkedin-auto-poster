@@ -6,8 +6,8 @@ name: Fetch and Draft
 
 on:
   # Uncomment the schedule below to enable automated daily runs
-  # schedule:
-  #   - cron: '0 6 * * 1-5'  # Weekdays 06:00 UTC
+  schedule:
+    - cron: '0 6 * * 1-5'  # Weekdays 06:00 UTC
   workflow_dispatch:
 
 permissions:
