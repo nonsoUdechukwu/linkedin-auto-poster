@@ -15,7 +15,6 @@ jobs:
       security-events: write
       contents: read
       actions: read
-      contents: read
     strategy:
       matrix:
         language: [python]
