@@ -1,7 +1,12 @@
 # Secrets and local config
 .env
+.env.*
+!.env.example
 config.yaml
 content-topics.yaml
+
+# Python env files
+.python-version
 
 # State files (generated at runtime)
 data/
@@ -12,18 +17,88 @@ data/blocked-names.txt
 
 # Python
 .venv/
+.venv-*/
+venv/
+env/
+ENV/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*$py.class
+*.py,cover
+*.so
+.Python
 .pytest_cache/
 .ruff_cache/
 .coverage
+.coverage.*
+.mypy_cache/
+.pyre/
+.pytype/
+.hypothesis/
+.tox/
+.nox/
+.dmypy.json
+dmypy.json
+htmlcov/
+pip-wheel-metadata/
 *.egg-info/
+*.egg
+.eggs/
 dist/
 build/
+
+# Packaging / distribution
+site/
+wheelhouse/
+MANIFEST
+
+# Logs and reports
+*.log
+*.out
+*.err
+pytestdebug.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local databases and caches
+*.sqlite
+*.sqlite3
+*.db
 
 # IDE
 .vscode/
 .idea/
+*.iml
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+
+# OS files
+.DS_Store
+.DS_Store?
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
+
+# Tooling caches
+.cache/
+.sass-cache/
+.eslintcache
+
+# Archives
+*.7z
+*.gz
+*.zip
+*.tar
+*.tgz
+*.bz2
+*.rar
 
 # Squad state (if initialized)
 .squad/
